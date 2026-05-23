@@ -1,6 +1,11 @@
-import { kv } from '@vercel/kv'
+import { Redis } from '@upstash/redis'
 import { NextRequest, NextResponse } from 'next/server'
 import type { ReviewTask } from '@/lib/types'
+
+const kv = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+})
 
 // GET /api/reviews/[taskId] — review page fetches full task data
 export async function GET(
@@ -14,7 +19,7 @@ export async function GET(
   return NextResponse.json(task)
 }
 
-// PATCH /api/reviews/[taskId] — append voice note transcription to task
+// PATCH /api/reviews/[taskId] — append voice note transcription
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { taskId: string } }
