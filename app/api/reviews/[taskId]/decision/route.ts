@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis'
+import { waitUntil } from '@vercel/functions'
 import { NextRequest, NextResponse } from 'next/server'
 import type { ReviewTask, ReviewStatus } from '@/lib/types'
 
@@ -33,18 +34,20 @@ export async function POST(
 
   await kv.set(`review:${params.taskId}`, { ...task, status: newStatus }, { ex: 172800 })
 
-  // Fire n8n resume without awaiting — n8n processes the rest of the workflow
-  // (Sofia Copy, etc.) which can take 10+ seconds. Waiting would time out Vercel.
+  // waitUntil keeps the Vercel lambda alive until n8n resume completes,
+  // while returning the response to the reviewer immediately.
   const body = JSON.stringify({ task_id: params.taskId, ...decision })
-  void fetch(task.resume_url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-  }).then(r => {
-    if (!r.ok) console.error('n8n resume failed:', r.status)
-  }).catch(err => {
-    console.error('n8n resume unreachable:', err)
-  })
+  waitUntil(
+    fetch(task.resume_url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    }).then(r => {
+      if (!r.ok) console.error('n8n resume failed:', r.status)
+    }).catch(err => {
+      console.error('n8n resume unreachable:', err)
+    })
+  )
 
   return NextResponse.json({ ok: true, status: newStatus })
 }
