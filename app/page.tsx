@@ -149,16 +149,20 @@ export default function DashboardPage() {
     await fetch(`/api/reviews/${taskId}`, { method: 'DELETE' })
   }
 
-  function loadReviews() {
-    setLoading(true)
+  function loadReviews(silent = false) {
+    if (!silent) setLoading(true)
     fetch('/api/reviews')
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(data => setReviews(data))
-      .catch(() => setError('Could not load reviews — KV not configured yet.'))
-      .finally(() => setLoading(false))
+      .then(data => { setReviews(data); setError(null) })
+      .catch(() => { if (!silent) setError('Could not load reviews — KV not configured yet.') })
+      .finally(() => { if (!silent) setLoading(false) })
   }
 
-  useEffect(() => { loadReviews() }, [])
+  useEffect(() => {
+    loadReviews()
+    const interval = setInterval(() => loadReviews(true), 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
@@ -169,7 +173,8 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {!loading && !error && (
-            <span className="text-xs text-loopin-text-secondary bg-loopin-border/50 px-3 py-1.5 rounded-full">
+            <span className="text-xs text-loopin-text-secondary bg-loopin-border/50 px-3 py-1.5 rounded-full flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-loopin-teal animate-pulse" />
               {reviews.length} {reviews.length === 1 ? 'item' : 'items'}
             </span>
           )}
