@@ -35,11 +35,15 @@ export function Stage1Strategy({ task, onDecision }: Props) {
           reviewer_notes: notes,
         }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        if (res.status === 409) throw new Error('This review was already submitted — check the queue for a newer version.')
+        throw new Error(err.error ?? `Server error ${res.status}`)
+      }
       setSubmitted(true)
       setTimeout(onDecision, 1800)
-    } catch {
-      alert('Failed to submit. Please try again.')
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to submit. Please try again.')
     } finally {
       setSubmitting(false)
     }

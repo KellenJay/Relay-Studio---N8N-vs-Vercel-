@@ -47,11 +47,15 @@ export function Stage2CopyVisual({ task, onDecision }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, platform_decisions, overall_feedback: overallFeedback }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        if (res.status === 409) throw new Error('This review was already submitted — check the queue for a newer version.')
+        throw new Error(err.error ?? `Server error ${res.status}`)
+      }
       setSubmitted(true)
       setTimeout(onDecision, 1800)
-    } catch {
-      alert('Failed to submit. Please try again.')
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to submit. Please try again.')
     } finally {
       setSubmitting(false)
     }
