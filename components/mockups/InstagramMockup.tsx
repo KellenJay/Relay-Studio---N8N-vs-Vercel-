@@ -9,6 +9,7 @@ interface Props {
 
 export function InstagramMockup({ copy, hashtags, imageUrl, client, variant, selected }: Props) {
   const initials = client.slice(0, 2).toUpperCase()
+  const safeHashtags = hashtags ?? []
 
   return (
     <div className={`rounded-xl border transition-all duration-200 overflow-hidden ${
@@ -89,9 +90,9 @@ export function InstagramMockup({ copy, hashtags, imageUrl, client, variant, sel
               <span className="font-semibold">{client.toLowerCase().replace(/\s/g, '_')} </span>
               {copy}
             </p>
-            {hashtags.length > 0 && (
+            {safeHashtags.length > 0 && (
               <p className="text-[#5B8DE8] text-[11px] mt-1 leading-relaxed line-clamp-2">
-                {hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}
+                {safeHashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}
               </p>
             )}
           </div>

@@ -12,6 +12,7 @@ interface Props {
 
 export function LinkedInMockup({ copy, hashtags, cta, imageUrl, client, variant, selected }: Props) {
   const initials = client.slice(0, 2).toUpperCase()
+  const safeHashtags = hashtags ?? []
 
   return (
     <div className={`rounded-xl border transition-all duration-200 overflow-hidden ${
@@ -50,9 +51,9 @@ export function LinkedInMockup({ copy, hashtags, cta, imageUrl, client, variant,
         </p>
 
         {/* Hashtags */}
-        {hashtags.length > 0 && (
+        {safeHashtags.length > 0 && (
           <p className="text-sm text-[#5B8DE8] mb-3 leading-relaxed">
-            {hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}
+            {safeHashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}
           </p>
         )}
 

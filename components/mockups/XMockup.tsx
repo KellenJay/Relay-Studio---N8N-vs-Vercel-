@@ -9,8 +9,10 @@ interface Props {
 
 export function XMockup({ copy, hashtags, imageUrl, client, variant, selected }: Props) {
   const initials = client.slice(0, 2).toUpperCase()
-  // Split into tweet thread if multi-line or over 280 chars
-  const tweets = copy.split('\n\n').filter(Boolean)
+  const safeHashtags = hashtags ?? []
+  const copyStr = Array.isArray(copy) ? (copy as string[]).join('\n\n') : (copy ?? '')
+  const tweets = copyStr.split('\n\n').filter(Boolean)
+  if (tweets.length === 0) tweets.push('')
 
   return (
     <div className={`rounded-xl border transition-all duration-200 overflow-hidden ${
@@ -52,9 +54,9 @@ export function XMockup({ copy, hashtags, imageUrl, client, variant, selected }:
                 {tweet}
               </p>
               {/* Hashtags on last tweet */}
-              {i === tweets.length - 1 && hashtags.length > 0 && (
+              {i === tweets.length - 1 && safeHashtags.length > 0 && (
                 <p className="text-sm text-[#1D9BF0] mt-1">
-                  {hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}
+                  {safeHashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}
                 </p>
               )}
               {/* Image on first tweet */}
