@@ -7,7 +7,6 @@ const kv = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 })
 
-// POST /api/reviews/[taskId]/decision — reviewer submits decision → n8n resumes
 export async function POST(
   req: NextRequest,
   { params }: { params: { taskId: string } }
@@ -34,20 +33,18 @@ export async function POST(
 
   await kv.set(`review:${params.taskId}`, { ...task, status: newStatus }, { ex: 172800 })
 
-  // Forward decision to n8n resume URL so the workflow continues
-  try {
-    const n8nRes = await fetch(task.resume_url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task_id: params.taskId, ...decision }),
-    })
-    if (!n8nRes.ok) {
-      console.error('n8n resume failed:', n8nRes.status, await n8nRes.text())
-    }
-  } catch (err) {
-    // Decision is saved — don't fail the UI if n8n is unreachable
-    console.error('Failed to reach n8n resume URL:', err)
-  }
+  // Fire n8n resume without awaiting — n8n processes the rest of the workflow
+  // (Sofia Copy, etc.) which can take 10+ seconds. Waiting would time out Vercel.
+  const body = JSON.stringify({ task_id: params.taskId, ...decision })
+  void fetch(task.resume_url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  }).then(r => {
+    if (!r.ok) console.error('n8n resume failed:', r.status)
+  }).catch(err => {
+    console.error('n8n resume unreachable:', err)
+  })
 
   return NextResponse.json({ ok: true, status: newStatus })
 }
