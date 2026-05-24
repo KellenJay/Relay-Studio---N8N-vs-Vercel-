@@ -6,6 +6,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { timeAgo, platformLabel, platformIcon } from '@/lib/utils'
 
+const ALL_PLATFORMS = ['linkedin', 'x', 'instagram'] as const
+
 function NewBriefForm({ onSubmitted }: { onSubmitted: () => void }) {
   const [open, setOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -13,12 +15,24 @@ function NewBriefForm({ onSubmitted }: { onSubmitted: () => void }) {
   const [form, setForm] = useState({
     brief_id: '',
     client: 'Loopin',
-    platform: 'linkedin',
+    platforms: [...ALL_PLATFORMS] as string[],
     topic_hint: '',
   })
 
+  const allChecked = form.platforms.length === ALL_PLATFORMS.length
+  const toggleAll = () =>
+    setForm(f => ({ ...f, platforms: allChecked ? [] : [...ALL_PLATFORMS] }))
+  const togglePlatform = (p: string) =>
+    setForm(f => ({
+      ...f,
+      platforms: f.platforms.includes(p)
+        ? f.platforms.filter(x => x !== p)
+        : [...f.platforms, p],
+    }))
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (form.platforms.length === 0) { setError('Select at least one platform'); return }
     setSubmitting(true)
     setError(null)
     try {
@@ -31,7 +45,7 @@ function NewBriefForm({ onSubmitted }: { onSubmitted: () => void }) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error ?? `Error ${res.status}`)
       }
-      setForm({ brief_id: '', client: 'Loopin', platform: 'linkedin', topic_hint: '' })
+      setForm({ brief_id: '', client: 'Loopin', platforms: [...ALL_PLATFORMS], topic_hint: '' })
       setOpen(false)
       onSubmitted()
     } catch (err: unknown) {
@@ -43,10 +57,7 @@ function NewBriefForm({ onSubmitted }: { onSubmitted: () => void }) {
 
   return (
     <div>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="btn-primary text-sm px-4 py-2 rounded-lg"
-      >
+      <button onClick={() => setOpen(o => !o)} className="btn-primary text-sm px-4 py-2 rounded-lg">
         {open ? 'Cancel' : '+ New Brief'}
       </button>
 
@@ -76,16 +87,30 @@ function NewBriefForm({ onSubmitted }: { onSubmitted: () => void }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs text-loopin-text-secondary mb-1">Platform</label>
-            <select
-              value={form.platform}
-              onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}
-              className="w-full bg-loopin-border/30 border border-loopin-border rounded-lg px-3 py-2 text-sm text-loopin-text focus:outline-none focus:border-loopin-purple"
-            >
-              <option value="linkedin">LinkedIn</option>
-              <option value="x">X / Twitter</option>
-              <option value="instagram">Instagram</option>
-            </select>
+            <label className="block text-xs text-loopin-text-secondary mb-2">Platforms</label>
+            <div className="flex items-center gap-4 flex-wrap">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  onChange={toggleAll}
+                  className="w-4 h-4 accent-loopin-purple"
+                />
+                <span className="text-xs font-medium text-loopin-text">Select all</span>
+              </label>
+              <div className="w-px h-4 bg-loopin-border" />
+              {ALL_PLATFORMS.map(p => (
+                <label key={p} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={form.platforms.includes(p)}
+                    onChange={() => togglePlatform(p)}
+                    className="w-4 h-4 accent-loopin-purple"
+                  />
+                  <span className="text-xs text-loopin-text-secondary">{platformLabel(p)}</span>
+                </label>
+              ))}
+            </div>
           </div>
           <div>
             <label className="block text-xs text-loopin-text-secondary mb-1">Topic hint</label>
@@ -116,6 +141,13 @@ export default function DashboardPage() {
   const [reviews, setReviews] = useState<ReviewSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  async function deleteReview(e: React.MouseEvent, taskId: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    setReviews(rs => rs.filter(r => r.task_id !== taskId))
+    await fetch(`/api/reviews/${taskId}`, { method: 'DELETE' })
+  }
 
   function loadReviews() {
     setLoading(true)
@@ -200,7 +232,16 @@ export default function DashboardPage() {
                     <ProgressBar current={r.stage} status={r.status} />
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    <StatusBadge status={r.status} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={r.status} />
+                      <button
+                        onClick={(e) => deleteReview(e, r.task_id)}
+                        title="Delete"
+                        className="w-6 h-6 flex items-center justify-center rounded-md text-loopin-muted hover:text-red-400 hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        ✕
+                      </button>
+                    </div>
                     <span className="text-xs text-loopin-muted">{timeAgo(r.created_at)}</span>
                     <span className="text-xs text-loopin-purple opacity-0 group-hover:opacity-100 transition-opacity">
                       Open →

@@ -19,6 +19,18 @@ export async function GET(
   return NextResponse.json(task)
 }
 
+// DELETE /api/reviews/[taskId] — remove from KV and index
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { taskId: string } }
+) {
+  await Promise.all([
+    kv.del(`review:${params.taskId}`),
+    kv.lrem('review:index', 0, params.taskId),
+  ])
+  return NextResponse.json({ ok: true })
+}
+
 // PATCH /api/reviews/[taskId] — append voice note transcription
 export async function PATCH(
   req: NextRequest,
